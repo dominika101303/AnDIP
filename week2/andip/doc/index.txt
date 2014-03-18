@@ -1,0 +1,21 @@
+Welcome to AnDiP's documentation!
+=================================
+
+Contents:
+
+.. toctree::
+   :maxdepth: 2
+
+   _static/installation.txt
+   _static/usage.txt
+   _static/verbs.txt
+   _static/tests.txt
+
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
+
