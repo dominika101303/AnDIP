@@ -9,7 +9,7 @@ conf = "http://localhost:7474/db/data/"
 provider =  GraphProvider(conf)
 
 provider.dropAll()
-provider.importData(data)
+#provider.importData(data)
 provider.connect()
 print provider.get_conf('ja')
 print provider.get_word(('czasownik', 'być', {'forma': 'czas teraźniejszy', 'liczba': 'pojedyncza', 'osoba': 'trzecia'}))

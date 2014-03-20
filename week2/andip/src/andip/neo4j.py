@@ -49,13 +49,13 @@ class GraphProvider(DefaultProvider):
     def _get_conf(self, word):
         nodes = self.getNodes(word)
         if len(nodes) == 0:
-            return None
+            raise LookupError("word=%s" % word)
         leaves = []
         for candidate in nodes:
             if self.__isLeaf(candidate):
                 leaves.append(candidate)
         if len(leaves) == 0:
-            raise LookupError("conf=%s", word)
+            raise LookupError("word=%s" % word)
         result = []
         for leaf in leaves:
             result.append(self.__getNodeConf(leaf))
@@ -84,13 +84,15 @@ class GraphProvider(DefaultProvider):
         pos = conf[0]
         word = conf[1]
         criteria = conf[2]
-        
-        posNode = self.getNodes(pos)[0]
+        nodes = self.getNodes(pos)
+        if len(nodes) == 0:
+            raise LookupError("conf=%s" % conf)
+        posNode = nodes[0]
         if posNode is None:
-            raise LookupError("word=%s", conf)
+            raise LookupError("conf=%s" % conf)
         wordNode = self.__getWordNode(posNode, word)
         if wordNode is None:
-            raise LookupError("word=%s", conf)
+            raise LookupError("conf=%s" % conf)
         return self.__getLeaf(wordNode, criteria)
     
     def connect(self):
@@ -146,19 +148,19 @@ class GraphProvider(DefaultProvider):
         return result;
     
     def _importDict(self, name, dataDict):
-        self.node(self.__nodeCounter,name)
+        self.node(self.__nodeCounter, name)
         nodeId = self.__nodeCounter
         self.__nodeCounter += 1
         for key in dataDict:
             if type(dataDict[key]) is dict:
                 childId = self._importDict(key, dataDict[key])
             else:
-                valueId= self.__nodeCounter
+                valueId = self.__nodeCounter
                 self.node(valueId, dataDict[key])
-                self.__nodeCounter+=1
-                childId= self.__nodeCounter
+                self.__nodeCounter += 1
+                childId = self.__nodeCounter
                 self.node(childId, key)
-                self.__nodeCounter+=1
+                self.__nodeCounter += 1
                 self.rel(childId, valueId, "CHILD")
                 self.rel(valueId, childId, "PARENT")
             self.rel(nodeId, childId, "CHILD")
