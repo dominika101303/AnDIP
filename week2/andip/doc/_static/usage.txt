@@ -5,7 +5,8 @@ AnDiP supports the following data providers:
 
 * ``FileProvider`` - simple provider which reads data from txt file,
 * ``DatabaseProvider`` - provider which uses Zope Database to store and gets data,
-* ``WikiProvider`` - the most important, downloads necessary data from web (using wiktionary.org API) and store it locally.
+* ``WikiProvider`` - the most important, downloads necessary data from web (using wiktionary.org API) and store it locally,
+* ``GraphProvider`` - provider which uses Neo4j graph Database to store and gets data.
 
 API
 ---
@@ -33,6 +34,11 @@ WikiProvider
 ++++++++++++
 
 .. automethod:: andip.PlWikiProvider.__init__
+
+GraphProvider
+++++++++++++++++
+.. automethod:: andip.neo4j.GraphProvider.importData
+.. automethod:: andip.neo4j.GraphProvider.dropAll
 
 Backoff mechanism
 -----------------

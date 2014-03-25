@@ -8,6 +8,13 @@ from py2neo import node, rel, neo4j
 from andip.default import DefaultProvider 
 class GraphProvider(DefaultProvider):
     def __init__(self, url, backoff=None):
+        """Provider which browse data in neo4j graph database.
+
+        :param url: database connection url
+        :type url: str
+        :param backoff: optional backoff
+        """
+
         DefaultProvider.__init__(self, backoff)
         self.url = url
         self.__nodeCounter = 0
@@ -15,12 +22,22 @@ class GraphProvider(DefaultProvider):
         self.connect()
         
     def __isLeaf(self, node):
+        """Method which verifies if node is a leaf.
+
+        :param node: checked node
+        :type node: tuple
+        """
         children = self.getChildren(node)
         if len(children) == 0:
             return True
         return False
     
     def __getNodeConf(self, origin):
+        """Method which gets configuration for given word.
+
+        :param origin: checked node 
+        :type origin: tuple
+        """
         node = origin
         if node is None:
             return None
@@ -62,6 +79,13 @@ class GraphProvider(DefaultProvider):
         return result
     
     def __getLeaf(self, node, criteria):
+        """Method which gets leaf for given criteria and in subtree in which the root is given node.
+
+        :param node: subtree root
+        :type node: tuple
+        :param criteria: criteria of searching
+        :type criteria: dict
+        """
         if len(criteria) == 0:
             return self.getChildren(node)[0][1]
         for nodeChild in self.getChildren(node):
@@ -73,6 +97,13 @@ class GraphProvider(DefaultProvider):
         return None
     
     def __getWordNode(self, posNode, word):
+        """Method which gets subtree root for given part of speech and canonical form of word.
+
+        :param posNode: root which represents part of speech
+        :type posNode: tuple
+        :param word: word for which node is looked
+        :type word: str
+        """
         for wNode in self.getChildren(posNode):
             if wNode[1] == "word":
                 for node in self.getChildren(wNode):
@@ -86,25 +117,41 @@ class GraphProvider(DefaultProvider):
         criteria = conf[2]
         nodes = self.getNodes(pos)
         if len(nodes) == 0:
-            raise LookupError("conf=%s" % conf)
+            raise LookupError("conf=%s" % str(conf))
         posNode = nodes[0]
         if posNode is None:
-            raise LookupError("conf=%s" % conf)
+            raise LookupError("conf=%s" % str(conf))
         wordNode = self.__getWordNode(posNode, word)
         if wordNode is None:
-            raise LookupError("conf=%s" % conf)
+            raise LookupError("conf=%s" % str(conf))
         return self.__getLeaf(wordNode, criteria)
     
     def connect(self):
+        """Method which creates connection with database.
+        """
         self.conn = neo4j.GraphDatabaseService(self.url)
     
     def close(self):
+        """Method which deletes handler to connection with database.
+        """
         self.conn = None
     
     def node(self, id, data):
+        """Method which adds node to graph.
+
+        :param id: identifier of node
+        :type id: str
+        :param data: name of node
+        :type data: str
+        """
         self.nodes.append(node(name=data))
     
     def getNodes(self, criteria):
+        """Method which gets node whose name is given in criteria
+
+        :param criteria: name of node
+        :type criteria: str
+        """
         nodes = neo4j.CypherQuery(self.conn, "MATCH (a) WHERE a.name='%s' RETURN a" % criteria)
         result = []
         for elem in nodes.stream():
@@ -113,25 +160,45 @@ class GraphProvider(DefaultProvider):
         return result;
             
     def rel(self, startNode, endNode, data):
+        """Method which creates relation between given nodes.
+
+        :param startNode: starting node
+        :type startNode: tuple
+        :param endNode: ending node
+        :type endNode: tuple
+        :param data: name of relation
+        :type data: string
+        """
         rels = [rel(startNode, data, endNode)]
         rels.extend(self.rels)
         self.rels = rels
     
     def graph(self):
+        """Method which initialize empty graph
+        """
         self.nodes = []
         self.rels = []
 
     def commit(self):
+        """Method which creates graph -  pushes data into database
+        """
         args = []
         args.extend(self.nodes)
         args.extend(self.rels)
         self.conn.create(*args)
         
     def dropAll(self):
+        """Method which deletes all nodes and relations from database
+        """
         neo4j.CypherQuery(self.conn, "MATCH (n) OPTIONAL MATCH (n)-[r]-() DELETE n,r").execute()
         
         
     def getParent(self, node):
+        """Method which gets node which is parent of given node.
+
+        :param node: child node
+        :type node: tuple
+        """
         nodes = neo4j.CypherQuery(self.conn, "MATCH (a)-[:PARENT]->(b) WHERE ID(a)=%s RETURN b" % node[0])
         result = []
         for elem in nodes.stream():
@@ -140,6 +207,11 @@ class GraphProvider(DefaultProvider):
         return result;
         
     def getChildren(self, node):
+        """Method which gets all children of given node.
+
+        :param node: parent node
+        :type node: tuple
+        """
         nodes = neo4j.CypherQuery(self.conn, "MATCH (a)-[:CHILD]->(b) WHERE ID(a)=%s RETURN b" % node[0])
         result = []
         for elem in nodes.stream():
@@ -148,6 +220,13 @@ class GraphProvider(DefaultProvider):
         return result;
     
     def _importDict(self, name, dataDict):
+        """Method which imports tree for given part of speech.
+
+        :param name: name of part of speech
+        :type name: str
+        :param dataDict: data dictionary
+        :type dataDict: dict
+        """
         self.node(self.__nodeCounter, name)
         nodeId = self.__nodeCounter
         self.__nodeCounter += 1
@@ -168,6 +247,12 @@ class GraphProvider(DefaultProvider):
         return nodeId
     
     def importData(self, dataDict):
+        """Methods which imports data into database. 
+
+        :param dataDict: data dictionary (the same as for fileProvider)
+        :type dataDict: dict
+        
+        """
         for elem in dataDict:
             self.connect()
             self.__nodeCounter = 0

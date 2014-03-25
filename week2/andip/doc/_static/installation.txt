@@ -13,3 +13,22 @@ The following libraries are required:
                 ... or ...
 
                 apt-get install python-zodb
+
+Neo4j and Py2neo installation:
+==============================
+    * Download http://www.neo4j.org/download_thanks?edition=community&release=2.0.1&platform=unix&packaging=zip&architecture=x32
+    * Unpack downloaded file to folder <DIR>
+    * 
+      .. code-block:: bash
+
+               cd <DIR>/bin
+               sudo ./neo4j-installer install
+               easy_install py2neo
+
+Start and stop Neo4j:
+=====================
+.. code-block:: bash
+
+   sudo service neo4j-service start|stop
+     
+
