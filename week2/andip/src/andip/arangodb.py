@@ -4,10 +4,11 @@ Created on 15 mar 2014
 
 @author: dominika
 '''
-from py2neo import node, rel, neo4j
+import sys
+from arango import create, c
 from andip.default import DefaultProvider 
-class Neo4JProvider(DefaultProvider):
-    def __init__(self, url, backoff=None):
+class ArangoProvider(DefaultProvider):
+    def __init__(self, backoff=None):
         """Provider which browse data in neo4j graph database.
 
         :param url: database connection url
@@ -16,7 +17,6 @@ class Neo4JProvider(DefaultProvider):
         """
 
         DefaultProvider.__init__(self, backoff)
-        self.url = url
         self.__nodeCounter = 0
         self.conn = None
         self.connect()
@@ -57,7 +57,7 @@ class Neo4JProvider(DefaultProvider):
                     value = node[1]
                 else:
                     resultDict[node[1]] = value
-                    #value = None
+                    # value = None
         lemma = resultDict["word"]
         del resultDict["word"]
         return (pos, lemma, resultDict)
@@ -67,7 +67,6 @@ class Neo4JProvider(DefaultProvider):
         if len(nodes) == 0:
             raise LookupError("word=%s" % word)
         leaves = [c for c in nodes if self.__isLeaf(c)]
-        print leaves
         if len(leaves) == 0:
             raise LookupError("word=%s" % word)
         result = [self.__getNodeConf(leaf) for leaf in leaves]
@@ -124,7 +123,8 @@ class Neo4JProvider(DefaultProvider):
     def connect(self):
         """Method which creates connection with database.
         """
-        self.conn = neo4j.GraphDatabaseService(self.url)
+        self.conn = create(db="test")
+        self.conn.database.create()
     
     def close(self):
         """Method which deletes handler to connection with database.
@@ -139,7 +139,8 @@ class Neo4JProvider(DefaultProvider):
         :param data: name of node
         :type data: str
         """
-        self.nodes.append(node(name=data))
+        node = self.conn.test.documents.create({"name":data})
+        self.nodes.append(node)
     
     def getNodes(self, criteria):
         """Method which gets node whose name is given in criteria
@@ -147,11 +148,10 @@ class Neo4JProvider(DefaultProvider):
         :param criteria: name of node
         :type criteria: str
         """
-        nodes = neo4j.CypherQuery(self.conn, "MATCH (a) WHERE a.name='%s' RETURN a" % criteria)
+        self.conn.test.query.filter("obj.name == '%s'"%criteria).build_query()
         result = []
-        for elem in nodes.stream():
-            node = (elem[0]._id, elem[0]["name"])
-            result.append(node)
+        for elem in self.conn.test.query.execute():
+            result.append(elem)
         return result;
             
     def rel(self, startNode, endNode, data):
@@ -164,9 +164,8 @@ class Neo4JProvider(DefaultProvider):
         :param data: name of relation
         :type data: string
         """
-        rels = [rel(startNode, data, endNode)]
-        rels.extend(self.rels)
-        self.rels = rels
+        rel = self.conn.test_edges.edges.create(self.nodes[startNode], self.nodes[endNode], {"label": data})
+        self.rels.append(rel)
     
     def graph(self):
         """Method which initialize empty graph
@@ -174,18 +173,12 @@ class Neo4JProvider(DefaultProvider):
         self.nodes = []
         self.rels = []
 
-    def commit(self):
-        """Method which creates graph -  pushes data into database
-        """
-        args = []
-        args.extend(self.nodes)
-        args.extend(self.rels)
-        self.conn.create(*args)
         
     def dropAll(self):
         """Method which deletes all nodes and relations from database
         """
-        neo4j.CypherQuery(self.conn, "MATCH (n) OPTIONAL MATCH (n)-[r]-() DELETE n,r").execute()
+        self.conn.test.delete()
+        self.conn.test_edges.delete()
         
         
     def getParent(self, node):
@@ -194,7 +187,9 @@ class Neo4JProvider(DefaultProvider):
         :param node: child node
         :type node: tuple
         """
-        nodes = neo4j.CypherQuery(self.conn, "MATCH (a)-[:PARENT]->(b) WHERE ID(a)=%s RETURN b" % node[0])
+        edges=self.conn.test.edges(node, direction="out")
+        for edge in edges:
+            print edge
         result = []
         for elem in nodes.stream():
             node = (elem[0]._id, elem[0]["name"])
@@ -207,7 +202,26 @@ class Neo4JProvider(DefaultProvider):
         :param node: parent node
         :type node: tuple
         """
-        nodes = neo4j.CypherQuery(self.conn, "MATCH (a)-[:CHILD]->(b) WHERE ID(a)=%s RETURN b" % node[0])
+        query = """
+        FOR p IN test
+        FILTER p.source._id == '%s'
+        RETURN p.vertices[*].name
+        """ % node.body["_id"]
+        
+        wrapper = lambda conn, item: item
+        try:
+            print "child" + str(node)
+            edges=c.query(query)
+            print "test"
+            print edges
+            print "test" + str(edges.first)
+        except:
+            print "exception"
+            e = sys.exc_info()
+            print sys.exc_info()[0]
+        
+        for edge in edges:
+            print edge
         result = []
         for elem in nodes.stream():
             node = (elem[0]._id, elem[0]["name"])
@@ -248,8 +262,9 @@ class Neo4JProvider(DefaultProvider):
         :type dataDict: dict
         
         """
+        self.conn.test.create()
+        self.conn.test_edges.create_edges()
         for elem in dataDict:
             self.__nodeCounter = 0
             self.graph()
             self._importDict(elem, dataDict[elem])
-            self.commit()
