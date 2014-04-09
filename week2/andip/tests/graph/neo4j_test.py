@@ -2,7 +2,7 @@
 import os
 import unittest
 from andip import FileProvider
-from andip.neo4j import GraphProvider
+from andip.neo4j import Neo4JProvider
 
 class GraphPolishTest(unittest.TestCase):
     @classmethod
@@ -22,7 +22,7 @@ class GraphPolishTest(unittest.TestCase):
         cls.oracle = FileProvider(os.sep.join(path))
         conf = "http://localhost:7474/db/data/"
         data = eval(open("%s.txt" % os.sep.join(path)).read())
-        provider =  GraphProvider(conf)
+        provider =  Neo4JProvider(conf)
         provider.dropAll()
         provider.importData(data)
         provider.connect()

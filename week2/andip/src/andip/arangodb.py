@@ -40,7 +40,7 @@ class ArangoProvider(DefaultProvider):
         node = origin
         if node is None:
             return None
-        result = [node[1]]
+        result = [node.body["name"]]
         hasParent = True
         pos = None
         resultDict = {}
@@ -50,14 +50,14 @@ class ArangoProvider(DefaultProvider):
             parent = self.getParent(node)
             if len(parent):
                 node = parent[0]
-                result.append(node[1])
-                pos = node[1]
+                result.append(node.body["name"])
+                pos = node.body["name"]
                 hasParent = True
                 if value is None:
-                    value = node[1]
+                    value = node.body["name"]
                 else:
-                    resultDict[node[1]] = value
-                    # value = None
+                    resultDict[node.body["name"]] = value
+                    value = None
         lemma = resultDict["word"]
         del resultDict["word"]
         return (pos, lemma, resultDict)
@@ -81,12 +81,12 @@ class ArangoProvider(DefaultProvider):
         :type criteria: dict
         """
         if len(criteria) == 0:
-            return self.getChildren(node)[0][1]
+            return self.getChildren(node)[0].body["name"]
         for nodeChild in self.getChildren(node):
-            if nodeChild[1] in criteria:
+            if nodeChild.body["name"] in criteria:
                 for child in self.getChildren(nodeChild):
-                    if child[1] == criteria[nodeChild[1]]:
-                        del criteria[nodeChild[1]]
+                    if child.body["name"] == criteria[nodeChild.body["name"]]:
+                        del criteria[nodeChild.body["name"]]
                         return self.__getLeaf(child, criteria)
         return None
     
@@ -99,9 +99,9 @@ class ArangoProvider(DefaultProvider):
         :type word: str
         """
         for wNode in self.getChildren(posNode):
-            if wNode[1] == "word":
+            if wNode.body["name"] == "word":
                 for node in self.getChildren(wNode):
-                    if node[1] == word:
+                    if node.body["name"] == word:
                         return node
         return None
     
@@ -148,9 +148,9 @@ class ArangoProvider(DefaultProvider):
         :param criteria: name of node
         :type criteria: str
         """
-        self.conn.test.query.filter("obj.name == '%s'"%criteria).build_query()
+        
         result = []
-        for elem in self.conn.test.query.execute():
+        for elem in self.conn.connection.query(self.conn.test.query.filter("obj.name == '%s'"%criteria).build_query()):
             result.append(elem)
         return result;
             
@@ -179,6 +179,7 @@ class ArangoProvider(DefaultProvider):
         """
         self.conn.test.delete()
         self.conn.test_edges.delete()
+        self.connect()
         
         
     def getParent(self, node):
@@ -187,13 +188,12 @@ class ArangoProvider(DefaultProvider):
         :param node: child node
         :type node: tuple
         """
-        edges=self.conn.test.edges(node, direction="out")
-        for edge in edges:
-            print edge
+        query = self.conn.test_edges.query.filter("obj._from == '%s' && obj.label=='PARENT'" % node.body["_id"]).build_query()
         result = []
-        for elem in nodes.stream():
-            node = (elem[0]._id, elem[0]["name"])
-            result.append(node)
+        for edge in self.conn.connection.query(query):
+            for node in self.conn.connection.query(
+            self.conn.test.query.filter("obj._id == '%s'" % edge["_to"]).build_query()):
+                result.append(node)
         return result;
         
     def getChildren(self, node):
@@ -202,30 +202,12 @@ class ArangoProvider(DefaultProvider):
         :param node: parent node
         :type node: tuple
         """
-        query = """
-        FOR p IN test
-        FILTER p.source._id == '%s'
-        RETURN p.vertices[*].name
-        """ % node.body["_id"]
-        
-        wrapper = lambda conn, item: item
-        try:
-            print "child" + str(node)
-            edges=c.query(query)
-            print "test"
-            print edges
-            print "test" + str(edges.first)
-        except:
-            print "exception"
-            e = sys.exc_info()
-            print sys.exc_info()[0]
-        
-        for edge in edges:
-            print edge
+        query = self.conn.test_edges.query.filter("obj._from == '%s' && obj.label=='CHILD'" % node.body["_id"]).build_query()
         result = []
-        for elem in nodes.stream():
-            node = (elem[0]._id, elem[0]["name"])
-            result.append(node)
+        for edge in self.conn.connection.query(query):
+            for node in self.conn.connection.query(
+            self.conn.test.query.filter("obj._id == '%s'" % edge["_to"]).build_query()):
+                result.append(node)
         return result;
     
     def _importDict(self, name, dataDict):
