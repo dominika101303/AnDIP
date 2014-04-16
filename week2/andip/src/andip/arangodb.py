@@ -10,7 +10,7 @@ from andip.default import DefaultProvider
 
 
 class ArangoProvider(DefaultProvider):
-    def __init__(self, backoff=None):
+    def __init__(self, backoff = None):
         """Provider which browse data in neo4j graph database.
 
         :param url: database connection url

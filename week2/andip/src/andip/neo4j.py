@@ -9,7 +9,7 @@ from andip.default import DefaultProvider
 
 
 class Neo4JProvider(DefaultProvider):
-    def __init__(self, url, backoff=None):
+    def __init__(self, url, backoff = None):
         """Provider which browse data in neo4j graph database.
 
         :param url: database connection url

@@ -13,6 +13,14 @@ The following libraries are required:
                 ... or ...
 
                 apt-get install python-zodb
+                
+Graph Databases 
+===============
+
+Andip supports following graph databases:
+
+    * Neo4j v2.0.1
+    * ArangoDB v2.0.4
 
 Neo4j and Py2neo installation:
 ==============================
@@ -30,5 +38,16 @@ Start and stop Neo4j:
 .. code-block:: bash
 
    sudo service neo4j-service start|stop
+   
+   
+   
+ArangoDB and ArangoDB Python Driver installation:
+==============================
+     * to install ArangoDB follow installation instructions from site: https://www.arangodb.org/download
+     * to install ArangoDB Python Driver run as root:
+      .. code-block:: bash
+
+               pip install arango
+
      
 
